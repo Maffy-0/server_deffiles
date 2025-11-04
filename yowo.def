@@ -1,0 +1,113 @@
+BootStrap: docker
+From: pytorch/pytorch:2.5.0-cuda12.1-cudnn9-runtime
+
+%labels
+    Maintainer tokumasu
+    Version 2.5.0
+
+%environment
+    export PATH="/usr/local/nvidia/bin:/usr/local/cuda/bin:/opt/conda/bin:$PATH"
+    export NVIDIA_VISIBLE_DEVICES="${NVIDIA_VISIBLE_DEVICES:-all}"
+    export NVIDIA_DRIVER_CAPABILITIES="${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}"
+    export LD_LIBRARY_PATH="/usr/local/nvidia/lib:/usr/local/nvidia/lib64:$LD_LIBRARY_PATH"
+    export PYTORCH_VERSION="2.5.0"
+
+%post
+    apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        binutils \
+        tmux \
+        screen \
+        dpkg \
+        git \
+        vim \
+        less \
+        wget \
+        unzip \
+        curl \
+        ca-certificates \
+        libjpeg-dev \
+        libpng-dev \
+        libssl-dev \
+        zlib1g-dev \
+        libffi-dev \
+        && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+    pip install --upgrade pip
+
+    # よく使うpipパッケージ群
+    pip install \
+        numpy \
+        pandas \
+        matplotlib \
+        seaborn \
+        scikit-learn \
+        scipy \
+        sympy \
+        opencv-python \
+        tqdm \
+        joblib \
+        Pillow \
+        requests \
+        PyYAML \
+        ipython \
+        jupyter \
+        notebook \
+        black \
+        isort \
+        flake8 \
+        autopep8 \
+        mypy \
+        rich \
+        pyinstaller \
+        pybind11 \
+        Cython \
+        pyarrow \
+        h5py \
+        typer \
+        click \
+        typer-cli \
+        fire \
+        loguru \
+        python-dateutil \
+        psutil \
+        tabulate \
+        virtualenv \
+        pip-tools
+
+    # 追加のpipパッケージ（固定バージョン指定なし）
+    pip install \
+        black \
+        click \
+        filelock \
+        fsspec \
+        fvcore \
+        iopath \
+        Jinja2 \
+        MarkupSafe \
+        mpmath \
+        mypy-extensions \
+        networkx \
+        numpy \
+        opencv-python \
+        packaging \
+        pathspec \
+        pillow \
+        platformdirs \
+        portalocker \
+        PyYAML \
+        sympy \
+        tabulate \
+        termcolor \
+        tomli \
+        torch \
+        torchvision \
+        tqdm \
+        typing_extensions \
+        yacs
+
+%runscript
+    echo "PyTorch 2.5.0 + CUDA 12.1 開発環境コンテナです"
+
+%test
+    python -c "import torch; print('torch version:', torch.__version__)"

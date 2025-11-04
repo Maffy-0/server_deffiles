@@ -1,0 +1,97 @@
+Bootstrap: docker
+From: pytorch/pytorch:2.5.0-cuda12.1-cudnn9-devel
+
+%labels
+    Maintainer tokumasu
+    Version v1.4-optimized
+    Description "Optimized Ubuntu 24.04 with ML/DL environment for mmaction2"
+
+%environment
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    export PATH=/opt/conda/bin:$PATH
+    export TZ=Asia/Tokyo
+    export CUDA_HOME=/usr/local/cuda
+    export PATH=$CUDA_HOME/bin:$PATH
+    export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+
+%files
+    /mnt/nas/home/tokumasu/mmcv       /opt/mmcv
+    /mnt/nas/home/tokumasu/mmaction2  /opt/mmaction2
+
+%post
+    # 非対話型モードの設定
+    export DEBIAN_FRONTEND=noninteractive
+
+    # パッケージインストールとタイムゾーン設定（単一コマンド化）
+    apt-get update && apt-get install -y --no-install-recommends \
+        tzdata \
+        build-essential \
+        tmux screen tree \
+        vim wget curl git ca-certificates sudo gnupg \
+        htop iotop lsof ncdu less \
+        pciutils usbutils \
+        neofetch \
+        python3 python3-pip python3-dev python3-venv \
+        iputils-ping net-tools \
+        unzip zip \
+        ffmpeg \
+        software-properties-common \
+        cmake pkg-config \
+        libgl1 libglx-mesa0 \
+        libglib2.0-0 libsm6 libxext6 libxrender1 \
+        cron at \
+        && \
+    echo "Asia/Tokyo" > /etc/timezone && \
+    ln -fs /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
+    dpkg-reconfigure --frontend noninteractive tzdata && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+    # Condaパス設定
+    echo 'export PATH=/opt/conda/bin:$PATH' >> /environment
+
+    # Mambaのインストールとベース環境構築（単一コマンド化）
+    /opt/conda/bin/conda install -n base -y -c conda-forge mamba && \
+    /opt/conda/bin/mamba install -n base -y -c defaults -c conda-forge \
+        numpy pandas scipy matplotlib seaborn scikit-learn \
+        jupyterlab notebook ipython \
+        opencv pillow tqdm transformers datasets einops moviepy \
+        scikit-image
+
+    # ---★ ここで TensorBoard を追加 ----------------------------------------
+    /opt/conda/bin/pip install --no-cache-dir --upgrade pip openmim tensorboard tensorboardX
+    /opt/conda/bin/pip install --no-cache-dir wandb
+    # ----------------------------------------------------------------------
+
+    # pipパッケージのインストール（キャッシュ無効化）
+    /opt/conda/bin/pip install --no-cache-dir \
+        rich pycocotools shapely terminaltables yapf opencv-python-headless python-dotenv ultralytics
+
+    # timm，importlib-metadataのインストール
+    /opt/conda/bin/pip install --no-cache-dir timm importlib-metadata
+
+    # OpenMMLab系パッケージのインストール
+    /opt/conda/bin/mim install mmdet==3.3.0 mmengine==0.10.4 mmyolo==0.6.0
+
+    # --- 追加操作 ---
+    # ビルド環境でもCUDAが参照できるよう、CUDA関連の環境変数を明示的に設定
+    export CUDA_HOME=/usr/local/cuda
+    export PATH=$CUDA_HOME/bin:$PATH
+    export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+    export FORCE_CUDA="1"    
+
+    # ローカルでコピーされたディレクトリ内のパッケージを編集可能モードでインストール
+    /opt/conda/bin/pip install -e /opt/mmcv -v
+    /opt/conda/bin/pip install -e /opt/mmaction2
+
+%runscript
+    exec /bin/bash
+
+%test
+    echo "[System Validation]"
+    echo "1. Conda Version: $(/opt/conda/bin/conda --version)"
+    echo "2. Python Path: $(which python)"
+    echo "3. PyTorch Version: $(python -c 'import torch; print(torch.__version__)')"
+    echo "4. CUDA Available: $(python -c 'import torch; print(torch.cuda.is_available())')"
+    echo "5. OpenCV Version: $(python -c 'import cv2; print(cv2.__version__)')"
