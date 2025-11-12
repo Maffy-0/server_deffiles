@@ -1,0 +1,104 @@
+Bootstrap: docker
+From: pytorch/pytorch:2.5.0-cuda12.1-cudnn9-devel
+
+%labels
+    Maintainer tokumasu
+    Version v1.4-optimized
+    Description "Optimized Ubuntu 24.04 with ML/DL environment for mmaction2"
+
+%environment
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    export PATH=/opt/conda/bin:$PATH
+    export TZ=Asia/Tokyo
+    export CUDA_HOME=/usr/local/cuda
+    export PATH=$CUDA_HOME/bin:$PATH
+    export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+
+%files
+    /mnt/nas/home/tokumasu/mmcv       /opt/mmcv
+    /mnt/nas/home/tokumasu/mmaction2  /opt/mmaction2
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    # OS パッケージ
+    apt-get update && apt-get install -y --no-install-recommends \
+        tzdata \
+        build-essential \
+        tmux screen tree \
+        vim wget curl git ca-certificates sudo gnupg \
+        htop iotop lsof ncdu less \
+        pciutils usbutils neofetch \
+        python3 python3-pip python3-dev python3-venv \
+        iputils-ping net-tools \
+        unzip zip \
+        ffmpeg \
+        software-properties-common \
+        cmake pkg-config \
+        libgl1 libglx-mesa0 \
+        libglib2.0-0 libsm6 libxext6 libxrender1 \
+        cron at && \
+    echo "Asia/Tokyo" > /etc/timezone && \
+    ln -fs /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
+    dpkg-reconfigure --frontend noninteractive tzdata && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+    # conda パスを環境に追加
+    echo 'export PATH=/opt/conda/bin:$PATH' >> /environment
+
+    # conda 自体はベースに同梱．必要ならアップデートのみ．
+    /opt/conda/bin/conda update -n base -y conda
+
+    # pip 系の基盤
+    /opt/conda/bin/pip install --no-cache-dir --upgrade pip wheel setuptools openmim
+
+    # 科学技術系パッケージ一括（mamba は使わず pip で統一）
+    /opt/conda/bin/pip install --no-cache-dir \
+        numpy pandas scipy matplotlib seaborn scikit-learn \
+        jupyterlab notebook ipython \
+        pillow tqdm transformers datasets einops moviepy scikit-image \
+        rich pycocotools shapely terminaltables yapf python-dotenv \
+        wandb \
+        ultralytics==8.3.225 \
+        opencv-python==4.12.0.88
+
+    # Torch エコシステムを 2.5.0 系に揃える（ベースの torch==2.5.0+cu121 に整合）
+    /opt/conda/bin/pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu121 \
+        torchvision==0.20.0 torchaudio==2.5.0
+
+    # grad-cam は依存を引かずに導入（torch／torchvision／opencv は既に満たす）
+    /opt/conda/bin/pip install --no-cache-dir --no-deps grad-cam==1.5.0
+    /opt/conda/bin/pip install --no-cache-dir ttach
+
+    # 補助
+    /opt/conda/bin/pip install --no-cache-dir timm importlib-metadata tensorboard tensorboardX
+
+    # OpenMMLab
+    /opt/conda/bin/mim install mmdet==3.3.0 mmengine==0.10.4 mmyolo==0.6.0
+
+    # CUDA 環境変数
+    export CUDA_HOME=/usr/local/cuda
+    export PATH=$CUDA_HOME/bin:$PATH
+    export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+    export FORCE_CUDA="1"
+
+    # ローカルパッケージを編集可能モードで導入
+    /opt/conda/bin/pip install -e /opt/mmcv -v
+    /opt/conda/bin/pip install -e /opt/mmaction2
+
+    # 依存整合性チェック
+    /opt/conda/bin/pip check || true
+
+%runscript
+    exec /bin/bash
+
+%test
+    echo "[System Validation]"
+    echo "1. Conda Version: $(/opt/conda/bin/conda --version)"
+    echo "2. Python Path: $(which python)"
+    echo "3. PyTorch Version: $(python -c 'import torch; print(torch.__version__)')"
+    echo "4. CUDA Available: $(python -c 'import torch; print(torch.cuda.is_available())')"
+    echo "5. OpenCV Version: $(python -c 'import cv2; print(cv2.__version__)')"
+    echo "6. TorchVision Version: $(python -c 'import torchvision as tv; print(tv.__version__)')"
+
