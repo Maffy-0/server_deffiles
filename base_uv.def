@@ -27,6 +27,7 @@ From: pytorch/pytorch:2.5.0-cuda12.1-cudnn9-devel
         libavcodec-dev libavformat-dev libswscale-dev \
         libatlas-base-dev libtbb2 libtbb-dev \
         libv4l-dev v4l-utils libopencv-dev python3-opencv \
+        fonts-noto-cjk \
         && rm -rf /var/lib/apt/lists/*
 
     ln -fs /usr/share/zoneinfo/Asia/Tokyo /etc/localtime

@@ -37,7 +37,7 @@ From: pytorch/pytorch:2.5.0-cuda12.1-cudnn9-devel
         software-properties-common \
         cmake pkg-config \
         libgl1 libglx-mesa0 \
-        libglib2.0-0 libsm6 libxext6 libxrender1 \
+        libglib2.0-0 libsm6 libxext6 libxrender1 fonts-noto-cjk \
         cron at && \
     echo "Asia/Tokyo" > /etc/timezone && \
     ln -fs /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
